@@ -5,7 +5,7 @@ import { LockIcon, ErrorCircleIcon, NetworkIcon, RefreshOutlineIcon, GroupIcon }
 import { Button, Card, Text, Badge, Callout, Input } from '@vapor-ui/core';
 import { Flex, HStack, Stack, Box } from '../components/ui/Layout';
 import { StyledTable, StyledTableHead, StyledTableBody, StyledTableRow, StyledTableHeader, StyledTableCell } from '../components/ui/StyledTable';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../components/ui/Modal';
+import { Modal } from '../components/ui/Modal';
 import socketService from '../services/socket';
 import authService from '../services/authService';
 import axiosInstance from '../services/axios';
@@ -806,14 +806,14 @@ function ChatRoomsComponent() {
       >
         <Stack gap="300">
           <Text typography="body1">
-            '<strong>{passwordModal.roomName}</strong>' 채팅방은 비밀번호가 필요합니다.
+            {passwordModal.roomName} 채팅방은 비밀번호가 필요합니다.
           </Text>
           <Input
             type="password"
             placeholder="비밀번호를 입력하세요"
             value={roomPassword}
             onChange={(e) => setRoomPassword(e.target.value)}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handlePasswordSubmit();
               }
