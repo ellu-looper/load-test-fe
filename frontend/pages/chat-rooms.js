@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { LockIcon, ErrorCircleIcon, NetworkIcon, RefreshOutlineIcon, GroupIcon } from '@vapor-ui/icons';
-import { Button, Card, Text, Badge, Callout, Input } from '@vapor-ui/core';
+import { Button, Card, Text, Badge, Callout, TextInput } from '@vapor-ui/core';
 import { Flex, HStack, Stack, Box } from '../components/ui/Layout';
 import { StyledTable, StyledTableHead, StyledTableBody, StyledTableRow, StyledTableHeader, StyledTableCell } from '../components/ui/StyledTable';
 import { Modal } from '../components/ui/Modal';
@@ -808,18 +808,20 @@ function ChatRoomsComponent() {
           <Text typography="body1">
             {passwordModal.roomName} 채팅방은 비밀번호가 필요합니다.
           </Text>
-          <Input
-            type="password"
-            placeholder="비밀번호를 입력하세요"
-            value={roomPassword}
-            onChange={(e) => setRoomPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handlePasswordSubmit();
-              }
-            }}
-            autoFocus
-          />
+          <TextInput.Root>
+            <TextInput.Field
+              type="password"
+              placeholder="비밀번호를 입력하세요"
+              value={roomPassword}
+              onChange={(e) => setRoomPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handlePasswordSubmit();
+                }
+              }}
+              autoFocus
+            />
+          </TextInput.Root>
           <HStack gap="200" justify="end" style={{ marginTop: 'var(--vapor-space-300)' }}>
             <Button
               variant="outline"
