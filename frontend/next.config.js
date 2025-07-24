@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true, // Re-enabled for better development experience
+  reactStrictMode: false, // Temporarily disabled to debug error #130
   transpilePackages: ['@vapor-ui/core', '@vapor-ui/icons'],
   // Docker 빌드를 위한 standalone 출력 모드
   output: 'standalone',

@@ -874,7 +874,12 @@ const ChatRooms = dynamic(() => Promise.resolve(ChatRoomsComponent), {
             <Text typography="heading3">채팅방 목록</Text>
           </Stack>
           <Box mt="400">
-            <LoadingIndicator text="로딩 중..." />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              <div className="spinner-border spinner-border-sm text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <Text typography="body1">로딩 중...</Text>
+            </div>
           </Box>
         </Card.Body>
       </Card.Root>
