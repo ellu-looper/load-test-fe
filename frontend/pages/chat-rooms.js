@@ -602,12 +602,15 @@ function ChatRoomsComponent() {
       console.error('Room join error:', error);
       
       let errorMessage = '입장에 실패했습니다.';
+      let shouldReopenModal = false;
+      
       if (error.response?.status === 404) {
         errorMessage = '채팅방을 찾을 수 없습니다.';
       } else if (error.response?.status === 403) {
         errorMessage = '채팅방 입장 권한이 없습니다.';
       } else if (error.response?.status === 401) {
         errorMessage = '비밀번호가 틀렸습니다.';
+        shouldReopenModal = password; // 비밀번호 에러면 모달 다시 열기
       }
       
       setError({
@@ -615,6 +618,18 @@ function ChatRoomsComponent() {
         message: error.response?.data?.message || errorMessage,
         type: 'danger'
       });
+      
+      // 비밀번호 에러인 경우 모달 다시 열기
+      if (shouldReopenModal) {
+        const room = rooms.find(r => r._id === roomId);
+        if (room) {
+          setPasswordModal({
+            show: true,
+            roomId: roomId,
+            roomName: room.name
+          });
+        }
+      }
     } finally {
       setJoiningRoom(false);
     }

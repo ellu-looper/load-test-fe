@@ -234,8 +234,8 @@ axiosInstance.interceptors.response.use(
       }
     };
 
-    // 401 에러 처리
-    if (status === 401) {
+    // 401 에러 처리 - 단, 채팅방 입장 요청은 제외
+    if (status === 401 && !config.url?.includes('/rooms/') && !config.url?.includes('/join')) {
       try {
         const refreshed = await authService.refreshToken();
         if (refreshed) {
