@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { LockIcon, ErrorCircleIcon, NetworkIcon, RefreshOutlineIcon, GroupIcon } from '@vapor-ui/icons';
-import { Button, Card, Text, Badge, Callout } from '@vapor-ui/core';
+import { Button, Card, Text, Badge, Callout, Input, Modal } from '@vapor-ui/core';
 import { Flex, HStack, Stack, Box } from '../components/ui/Layout';
 import { StyledTable, StyledTableHead, StyledTableBody, StyledTableRow, StyledTableHeader, StyledTableCell } from '../components/ui/StyledTable';
 import socketService from '../services/socket';
@@ -179,6 +179,8 @@ function ChatRoomsComponent() {
   const [hasMore, setHasMore] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [joiningRoom, setJoiningRoom] = useState(false);
+  const [passwordModal, setPasswordModal] = useState({ show: false, roomId: null, roomName: '' });
+  const [roomPassword, setRoomPassword] = useState('');
 
   // Refs
   const socketRef = useRef(null);
@@ -558,7 +560,7 @@ function ChatRoomsComponent() {
     };
   }, [currentUser, handleAuthError]);
 
-  const handleJoinRoom = async (roomId) => {
+  const handleJoinRoom = async (roomId, password = null) => {
     if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError({
         title: '채팅방 입장 실패',
@@ -568,10 +570,27 @@ function ChatRoomsComponent() {
       return;
     }
 
+    // Find the room to check if it has a password
+    const room = rooms.find(r => r._id === roomId);
+    if (room?.hasPassword && !password) {
+      // Show password modal
+      setPasswordModal({
+        show: true,
+        roomId: roomId,
+        roomName: room.name
+      });
+      return;
+    }
+
     setJoiningRoom(true);
 
     try {
-      const response = await axiosInstance.post(`/api/rooms/${roomId}/join`, {}, {
+      const requestBody = {};
+      if (password) {
+        requestBody.password = password;
+      }
+
+      const response = await axiosInstance.post(`/api/rooms/${roomId}/join`, requestBody, {
         timeout: 5000
       });
       
@@ -586,6 +605,8 @@ function ChatRoomsComponent() {
         errorMessage = '채팅방을 찾을 수 없습니다.';
       } else if (error.response?.status === 403) {
         errorMessage = '채팅방 입장 권한이 없습니다.';
+      } else if (error.response?.status === 401) {
+        errorMessage = '비밀번호가 틀렸습니다.';
       }
       
       setError({
@@ -596,6 +617,27 @@ function ChatRoomsComponent() {
     } finally {
       setJoiningRoom(false);
     }
+  };
+
+  const handlePasswordSubmit = () => {
+    if (!roomPassword.trim()) {
+      setError({
+        title: '비밀번호 입력 오류',
+        message: '비밀번호를 입력해주세요.',
+        type: 'warning'
+      });
+      return;
+    }
+
+    const { roomId } = passwordModal;
+    setPasswordModal({ show: false, roomId: null, roomName: '' });
+    setRoomPassword('');
+    handleJoinRoom(roomId, roomPassword.trim());
+  };
+
+  const handlePasswordCancel = () => {
+    setPasswordModal({ show: false, roomId: null, roomName: '' });
+    setRoomPassword('');
   };
 
   const renderRoomsTable = () => {
@@ -755,6 +797,55 @@ function ChatRoomsComponent() {
         </Card.Body>
       </Card.Root>
       
+      {/* Password Modal */}
+      <Modal 
+        open={passwordModal.show} 
+        onClose={handlePasswordCancel}
+      >
+        <Modal.Content>
+          <Modal.Header>
+            <Modal.Title>채팅방 비밀번호 입력</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Stack gap="300">
+              <Text typography="body1">
+                '<strong>{passwordModal.roomName}</strong>' 채팅방은 비밀번호가 필요합니다.
+              </Text>
+              <Input
+                type="password"
+                placeholder="비밀번호를 입력하세요"
+                value={roomPassword}
+                onChange={(e) => setRoomPassword(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                  }
+                }}
+                autoFocus
+              />
+            </Stack>
+          </Modal.Body>
+          <Modal.Footer>
+            <HStack gap="200" justify="end">
+              <Button
+                variant="outline"
+                color="secondary"
+                onClick={handlePasswordCancel}
+              >
+                취소
+              </Button>
+              <Button
+                color="primary"
+                onClick={handlePasswordSubmit}
+                disabled={!roomPassword.trim()}
+              >
+                입장
+              </Button>
+            </HStack>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal>
+
       {joiningRoom && (
         <div style={{
           position: 'fixed',
