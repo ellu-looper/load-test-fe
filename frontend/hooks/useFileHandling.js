@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Toast } from '../components/Toast';
 import fileService from '../services/fileService';
 
-export const useFileHandling = (socketRef, currentUser, router, handleSessionError) => {
+export const useFileHandling = (socketRef, currentUser, router, handleSessionError = async () => {}) => {
   const [filePreview, setFilePreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);

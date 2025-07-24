@@ -311,8 +311,13 @@ const ChatMessages = ({
     });
   }, [hasMoreMessages, loadingMessages, onLoadMore, onScrollPositionChange, onScroll]);
 
+  // Component mounted ref
+  const mountedRef = useRef(true);
+
   // 새 메시지 도착 시 스크롤 처리
   useLayoutEffect(() => {
+    if (!mountedRef.current) return;
+    
     if (messages.length > lastMessageCountRef.current) {
       const newMessages = messages.slice(lastMessageCountRef.current);
       const lastMessage = newMessages[newMessages.length - 1];
@@ -320,7 +325,7 @@ const ChatMessages = ({
       const shouldScroll = scrollToBottomOnNewMessage && 
         scrollHandler.current.shouldScrollToBottom(lastMessage, isMine(lastMessage));
 
-      if (shouldScroll) {
+      if (shouldScroll && mountedRef.current) {
         scrollHandler.current.scrollToBottom('smooth');
       }
 
@@ -330,24 +335,30 @@ const ChatMessages = ({
 
   // 과거 메시지 로드 후 스크롤 위치 복원
   useLayoutEffect(() => {
+    if (!mountedRef.current) return;
+    
     if (!loadingMessages && scrollHandler.current.isLoadingOldMessages.current) {
       if (scrollHandler.current.scrollRestorationRef.current) {
         cancelAnimationFrame(scrollHandler.current.scrollRestorationRef.current);
       }
 
       scrollHandler.current.scrollRestorationRef.current = requestAnimationFrame(() => {
-        scrollHandler.current.restoreScrollPosition(true);
+        if (mountedRef.current) {
+          scrollHandler.current.restoreScrollPosition(true);
+        }
       });
     }
   }, [loadingMessages]);
 
   // 스트리밍 메시지 처리
   useEffect(() => {
+    if (!mountedRef.current) return;
+    
     const streamingMessagesArray = Object.values(streamingMessages);
     if (streamingMessagesArray.length > 0) {
       const lastMessage = streamingMessagesArray[streamingMessagesArray.length - 1];
       
-      if (lastMessage && scrollHandler.current.shouldScrollToBottom(lastMessage, isMine(lastMessage))) {
+      if (lastMessage && scrollHandler.current.shouldScrollToBottom(lastMessage, isMine(lastMessage)) && mountedRef.current) {
         scrollHandler.current.scrollToBottom('smooth');
       }
     }
@@ -355,13 +366,17 @@ const ChatMessages = ({
 
   // 초기 스크롤 설정
   useLayoutEffect(() => {
+    if (!mountedRef.current) return;
+    
     if (!initialScrollRef.current && messages.length > 0) {
       scrollHandler.current.scrollToBottom('auto');
       initialScrollRef.current = true;
       
       if (initialLoadRef.current) {
         setTimeout(() => {
-          initialLoadRef.current = false;
+          if (mountedRef.current) {
+            initialLoadRef.current = false;
+          }
         }, 1000);
       }
     }
@@ -375,6 +390,7 @@ const ChatMessages = ({
     container.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
+      mountedRef.current = false;
       scrollHandler.current.cleanup();
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
@@ -382,6 +398,13 @@ const ChatMessages = ({
       container.removeEventListener('scroll', handleScroll);
     };
   }, [handleScroll]);
+
+  // Component unmount cleanup
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const allMessages = useMemo(() => {
     if (!Array.isArray(messages)) return [];

@@ -29,6 +29,12 @@ export const useSocketHandling = (router, maxRetries = 5) => { // 최대 재시�
   }, []);
 
   const handleConnectionError = useCallback(async (error, handleSessionError) => {
+    // Prevent recursive calls if already reconnecting
+    if (isReconnecting) {
+      console.log('Connection error handling skipped - already reconnecting');
+      return;
+    }
+
     console.error('Connection error:', error);
     setConnected(false);
     setIsReconnecting(true);
@@ -37,7 +43,12 @@ export const useSocketHandling = (router, maxRetries = 5) => { // 최대 재시�
       if (error?.message?.includes('세션') || 
           error?.message?.includes('인증') || 
           error?.message?.includes('토큰')) {
-        await handleSessionError?.();
+        try {
+          await handleSessionError?.();
+        } catch (sessionError) {
+          console.error('Session error handling failed:', sessionError);
+          Toast.error('세션 처리 중 오류가 발생했습니다.');
+        }
         return;
       }
 
@@ -64,7 +75,11 @@ export const useSocketHandling = (router, maxRetries = 5) => { // 최대 재시�
           } catch (retryError) {
             console.error('Retry connection failed:', retryError);
             setRetryCount(prev => prev + 1);
-            handleConnectionError(retryError, handleSessionError);
+            setIsReconnecting(false);
+            // Don't recursively call handleConnectionError to prevent infinite loops
+            if (retryCount + 1 >= maxRetries) {
+              Toast.error('채팅 서버와 연결할 수 없습니다. 페이지를 새로고침해주세요.');
+            }
           }
         }, retryDelay);
       } else {
@@ -75,7 +90,7 @@ export const useSocketHandling = (router, maxRetries = 5) => { // 최대 재시�
       console.error('Error handling connection error:', err);
       setIsReconnecting(false);
     }
-  }, [retryCount, maxRetries, cleanup, getRetryDelay, router?.query?.room]);
+  }, [retryCount, maxRetries, cleanup, getRetryDelay, router?.query?.room, isReconnecting]);
 
   const handleReconnect = useCallback(async (currentUser, handleSessionError) => {
     if (isReconnecting) return;

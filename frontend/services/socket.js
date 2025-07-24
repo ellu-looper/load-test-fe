@@ -138,7 +138,8 @@ class SocketService {
       if (error.message === 'Invalid session') {
         authService.refreshToken()
           .then(() => this.reconnect())
-          .catch(() => {
+          .catch((refreshError) => {
+            console.error('Token refresh failed during connection:', refreshError);
             authService.logout();
             reject(error);
           });
@@ -201,10 +202,7 @@ class SocketService {
 
     console.log(`[Socket] Cleanup started (reason: ${reason})`);
 
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
+    this.stopHeartbeat();
 
     if (reason !== CLEANUP_REASONS.RECONNECT) {
       this.reactionHandlers.clear();
@@ -245,7 +243,10 @@ class SocketService {
     if (error.message.includes('auth')) {
       authService.refreshToken()
         .then(() => this.reconnect())
-        .catch(() => authService.logout());
+        .catch((refreshError) => {
+          console.error('Auth refresh failed during connection error:', refreshError);
+          authService.logout();
+        });
       return;
     }
 
@@ -278,6 +279,7 @@ class SocketService {
   startHeartbeat() {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
     }
 
     this.heartbeatInterval = setInterval(() => {
@@ -291,9 +293,17 @@ class SocketService {
           }
         });
       } else {
-        this.cleanup(CLEANUP_REASONS.MANUAL);
+        console.log('[Socket] Heartbeat stopped - socket not connected');
+        this.stopHeartbeat();
       }
     }, 25000);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
   }
 
   getSocket() {

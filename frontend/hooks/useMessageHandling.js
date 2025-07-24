@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Toast } from '../components/Toast';
 import fileService from '../services/fileService';
 
-export const useMessageHandling = (socketRef, currentUser, router, handleSessionError, messages = []) => {
+export const useMessageHandling = (socketRef, currentUser, router, handleSessionError = async () => {}, messages = []) => {
  const [message, setMessage] = useState('');
  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
  const [showMentionList, setShowMentionList] = useState(false);

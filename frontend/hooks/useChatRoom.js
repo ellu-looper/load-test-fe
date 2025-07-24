@@ -49,6 +49,7 @@ export const useChatRoom = () => {
   const previousScrollHeightRef = useRef(0);
   const isLoadingRef = useRef(false);
   const loadMoreTriggeredRef = useRef(false);
+  const handleSessionErrorRef = useRef(async () => {});
 
   // Socket handling setup
   const {
@@ -111,21 +112,23 @@ export const useChatRoom = () => {
     getFilteredParticipants,
     insertMention,
     removeFilePreview
-  } = useMessageHandling(socketRef, currentUser, router);
+  } = useMessageHandling(socketRef, currentUser, router, (...args) => handleSessionErrorRef.current(...args), messages);
 
   // Cleanup 함수 수정
   const cleanup = useCallback((reason = 'MANUAL') => {
     if (!mountedRef.current || !router.query.room) return;
 
     try {
-      // cleanup이 이미 진행 중인지 확인
+      // cleanup이 이미 진행 중인지 확인 (atomic operation)
       if (cleanupInProgressRef.current) {
         console.log('[Chat] Cleanup already in progress, skipping...');
         return;
       }
 
       cleanupInProgressRef.current = true;
-      console.log(`[Chat] Starting cleanup (reason: ${reason})`);
+      cleanupCountRef.current += 1;
+      const currentCleanupId = cleanupCountRef.current;
+      console.log(`[Chat] Starting cleanup (reason: ${reason}, id: ${currentCleanupId})`);
 
       // Socket cleanup
       if (reason !== 'UNMOUNT' && router.query.room && socketRef.current?.connected) {
@@ -174,7 +177,7 @@ export const useChatRoom = () => {
         setError('채팅 연결이 끊어졌습니다. 재연결을 시도합니다.');
       }
 
-      console.log(`[Chat] Cleanup completed (reason: ${reason})`);
+      console.log(`[Chat] Cleanup completed (reason: ${reason}, id: ${currentCleanupId})`);
 
     } catch (error) {
       console.error('[Chat] Cleanup error:', error);
@@ -182,7 +185,9 @@ export const useChatRoom = () => {
         setError('채팅방 정리 중 오류가 발생했습니다.');
       }
     } finally {
+      // Ensure cleanup flag is reset even if error occurs
       cleanupInProgressRef.current = false;
+      console.log(`[Chat] Cleanup flag reset (id: ${currentCleanupId})`);
     }
   }, [
     setMessages, 
@@ -256,49 +261,82 @@ export const useChatRoom = () => {
 
   // 이전 메시지 로드 함수
   const loadPreviousMessages = useCallback(async () => {
-    if (!socketRef.current?.connected || loadingMessages) {
-      console.warn('Cannot load messages: Socket not connected or already loading');
+    if (!socketRef.current?.connected || loadingMessages || !mountedRef.current) {
+      console.warn('Cannot load messages: Socket not connected, already loading, or component unmounted');
       return;
     }
 
+    const abortController = new AbortController();
+    
     try {
       setLoadingMessages(true);
       const firstMessageTimestamp = messages[0]?.timestamp;
 
       if (loadMoreTimeoutRef.current) {
         clearTimeout(loadMoreTimeoutRef.current);
+        loadMoreTimeoutRef.current = null;
       }
 
       const responsePromise = new Promise((resolve, reject) => {
+        if (abortController.signal.aborted) {
+          reject(new Error('Operation aborted'));
+          return;
+        }
+
+        const handleAbort = () => reject(new Error('Operation aborted'));
+        abortController.signal.addEventListener('abort', handleAbort, { once: true });
+
         socketRef.current.emit('fetchPreviousMessages', {
           roomId: router?.query?.room,
           before: firstMessageTimestamp
         });
 
-        socketRef.current.once('previousMessagesLoaded', resolve);
-        socketRef.current.once('error', reject);
+        const cleanup = () => {
+          socketRef.current?.off('previousMessagesLoaded', handleResponse);
+          socketRef.current?.off('error', handleError);
+          abortController.signal.removeEventListener('abort', handleAbort);
+        };
+
+        const handleResponse = (response) => {
+          cleanup();
+          resolve(response);
+        };
+
+        const handleError = (error) => {
+          cleanup();
+          reject(error);
+        };
+
+        socketRef.current.once('previousMessagesLoaded', handleResponse);
+        socketRef.current.once('error', handleError);
       });
 
       const timeoutPromise = new Promise((_, reject) => {
         loadMoreTimeoutRef.current = setTimeout(() => {
+          abortController.abort();
           reject(new Error('Message loading timed out'));
         }, 10000);
       });
 
       const response = await Promise.race([responsePromise, timeoutPromise]);
 
-      if (response.messages) {
+      if (mountedRef.current && response?.messages) {
         processMessages(response.messages, response.hasMore, false);
       }
 
     } catch (error) {
-      console.error('Load previous messages error:', error);
-      Toast.error('이전 메시지를 불러오는데 실패했습니다.');
-      setHasMoreMessages(false);
+      if (error.message !== 'Operation aborted' && mountedRef.current) {
+        console.error('Load previous messages error:', error);
+        Toast.error('이전 메시지를 불러오는데 실패했습니다.');
+        setHasMoreMessages(false);
+      }
     } finally {
-      setLoadingMessages(false);
+      if (mountedRef.current) {
+        setLoadingMessages(false);
+      }
       if (loadMoreTimeoutRef.current) {
         clearTimeout(loadMoreTimeoutRef.current);
+        loadMoreTimeoutRef.current = null;
       }
     }
   }, [socketRef, router?.query?.room, loadingMessages, messages, processMessages, setHasMoreMessages]);
@@ -421,6 +459,13 @@ export const useChatRoom = () => {
     userRooms.current,
     processMessages
   );
+
+  // Update the handleSessionError ref when it becomes available
+  useEffect(() => {
+    if (handleSessionError) {
+      handleSessionErrorRef.current = handleSessionError;
+    }
+  }, [handleSessionError]);
 
   // Socket connection monitoring
   useEffect(() => {
@@ -571,7 +616,7 @@ export const useChatRoom = () => {
     handleFileSelect,
     handleFileDrop,
     removeFilePreview: removeFile
-  } = useFileHandling(socketRef, currentUser, router);
+  } = useFileHandling(socketRef, currentUser, router, (...args) => handleSessionErrorRef.current(...args));
 
   // Enter key handler
   const handleKeyDown = useCallback((e) => {
