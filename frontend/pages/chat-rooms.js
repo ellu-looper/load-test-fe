@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { LockIcon, ErrorCircleIcon, NetworkIcon, RefreshOutlineIcon, GroupIcon } from '@vapor-ui/icons';
-import { Button, Card, Text, Badge, Callout, Input, Modal } from '@vapor-ui/core';
+import { Button, Card, Text, Badge, Callout, Input } from '@vapor-ui/core';
 import { Flex, HStack, Stack, Box } from '../components/ui/Layout';
 import { StyledTable, StyledTableHead, StyledTableBody, StyledTableRow, StyledTableHeader, StyledTableCell } from '../components/ui/StyledTable';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../components/ui/Modal';
 import socketService from '../services/socket';
 import authService from '../services/authService';
 import axiosInstance from '../services/axios';
@@ -799,51 +800,43 @@ function ChatRoomsComponent() {
       
       {/* Password Modal */}
       <Modal 
-        open={passwordModal.show} 
+        isOpen={passwordModal.show} 
         onClose={handlePasswordCancel}
+        title="채팅방 비밀번호 입력"
       >
-        <Modal.Content>
-          <Modal.Header>
-            <Modal.Title>채팅방 비밀번호 입력</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Stack gap="300">
-              <Text typography="body1">
-                '<strong>{passwordModal.roomName}</strong>' 채팅방은 비밀번호가 필요합니다.
-              </Text>
-              <Input
-                type="password"
-                placeholder="비밀번호를 입력하세요"
-                value={roomPassword}
-                onChange={(e) => setRoomPassword(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handlePasswordSubmit();
-                  }
-                }}
-                autoFocus
-              />
-            </Stack>
-          </Modal.Body>
-          <Modal.Footer>
-            <HStack gap="200" justify="end">
-              <Button
-                variant="outline"
-                color="secondary"
-                onClick={handlePasswordCancel}
-              >
-                취소
-              </Button>
-              <Button
-                color="primary"
-                onClick={handlePasswordSubmit}
-                disabled={!roomPassword.trim()}
-              >
-                입장
-              </Button>
-            </HStack>
-          </Modal.Footer>
-        </Modal.Content>
+        <Stack gap="300">
+          <Text typography="body1">
+            '<strong>{passwordModal.roomName}</strong>' 채팅방은 비밀번호가 필요합니다.
+          </Text>
+          <Input
+            type="password"
+            placeholder="비밀번호를 입력하세요"
+            value={roomPassword}
+            onChange={(e) => setRoomPassword(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handlePasswordSubmit();
+              }
+            }}
+            autoFocus
+          />
+          <HStack gap="200" justify="end" style={{ marginTop: 'var(--vapor-space-300)' }}>
+            <Button
+              variant="outline"
+              color="secondary"
+              onClick={handlePasswordCancel}
+            >
+              취소
+            </Button>
+            <Button
+              color="primary"
+              onClick={handlePasswordSubmit}
+              disabled={!roomPassword.trim()}
+            >
+              입장
+            </Button>
+          </HStack>
+        </Stack>
       </Modal>
 
       {joiningRoom && (
