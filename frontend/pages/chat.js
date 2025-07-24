@@ -283,7 +283,7 @@ const ChatPage = () => {
             setMentionIndex={setMentionIndex}
             room={room} // room 객체 전달
             onMentionSelect={(user) => {
-              insertMention(user);
+              insertMention(messageInputRef, user);
               setShowMentionList(false);
             }}
             onFileRemove={removeFilePreview}
