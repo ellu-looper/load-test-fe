@@ -156,10 +156,9 @@ const Profile = () => {
     }
   };
 
-  if (!currentUser) return null;
-
   return (
     <div className="auth-container">
+      {!currentUser ? null : (
       <Card.Root className="auth-card">
         <Card.Body className="card-body">
           <Stack gap="400">
@@ -307,6 +306,7 @@ const Profile = () => {
           </Stack>
         </Card.Body>
       </Card.Root>
+      )}
     </div>
   );
 };

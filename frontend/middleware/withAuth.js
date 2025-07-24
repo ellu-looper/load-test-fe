@@ -22,7 +22,18 @@ export const withAuth = (WrappedComponent) => {
     }, [router]);
 
     if (isLoading) {
-      return null;
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: 'var(--vapor-color-background)',
+          color: 'var(--vapor-color-text-primary)'
+        }}>
+          <Text typography="body1">Loading...</Text>
+        </div>
+      );
     }
 
     return <WrappedComponent {...props} />;
