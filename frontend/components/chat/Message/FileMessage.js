@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  PdfIcon as FileText, 
-  ImageIcon as Image, 
-  MovieIcon as Film, 
-  CorrectOutlineIcon as CheckCheck, 
-  CorrectOutlineIcon as Check, 
-  MusicIcon as Music, 
-  ExternalLinkIcon as ExternalLink, 
+import {
+  PdfIcon as FileText,
+  ImageIcon as Image,
+  MovieIcon as Film,
+  SoundOnIcon as Music,
+  OpenInNewOutlineIcon as ExternalLink,
   DownloadIcon as Download,
   ErrorCircleIcon as AlertCircle 
 } from '@vapor-ui/icons';
